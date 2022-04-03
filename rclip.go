@@ -40,10 +40,15 @@ func main() {
 			common.ErrLog.Println(err)
 			return
 		}
-		stdin, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			common.ErrLog.Println(err)
-			return
+
+		stat, _ := os.Stdin.Stat()
+		stdin := []byte{}
+		if (stat.Mode() & os.ModeCharDevice) == 0 {
+			stdin, err = io.ReadAll(os.Stdin)
+			if err != nil {
+				common.ErrLog.Println(err)
+				return
+			}
 		}
 		event := common.Event{
 			Name:  *eventName,
