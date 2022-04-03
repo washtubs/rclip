@@ -4,10 +4,11 @@ package receiver
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io"
+	"encoding/gob"
 	"io/ioutil"
-	"rclip/common"
 	"strconv"
+
+	"github.com/washtubs/rclip/common"
 )
 
 type RclipRcv struct {
@@ -42,21 +43,12 @@ func NewRclipRcv(ca_cert_path string, cert_path string, key_path string, svr_ip 
 	return new_rcv, nil
 }
 
-func (clnt *RclipRcv) ReadandSend(reader io.Reader) {
+func (clnt *RclipRcv) ReadandSend(event common.Event) {
 	//read from stdin and send to the peer
-	msg, err := ioutil.ReadAll(reader)
+	encoder := gob.NewEncoder(clnt.conn)
+	err := encoder.Encode(event)
 	if err != nil {
-		common.ErrLog.Printf("error reading, %v", err)
+		common.ErrLog.Printf("error encoding / sending %v: %v", event, err)
 		return
 	}
-	if len(msg) == 0 {
-		common.InfoLog.Printf("ignoring zero length input")
-		return
-	}
-	_, err = clnt.conn.Write(msg)
-	if err != nil {
-		common.ErrLog.Printf("error sending, %v", err)
-		return
-	}
-
 }

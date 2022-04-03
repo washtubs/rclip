@@ -26,6 +26,12 @@ const HELLO_INTERVAL = 40
 const MAX_HELLO_LOST = 3
 const MAX_MSG_LEN = 640000
 
+type Event struct {
+	Name  string
+	Args  []string
+	Stdin []byte
+}
+
 func MakeErr(ierr error) error {
 	var buf bytes.Buffer
 	pc, _, line, _ := runtime.Caller(1)

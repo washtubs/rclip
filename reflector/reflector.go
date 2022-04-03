@@ -9,8 +9,9 @@ import (
 
 	"io/ioutil"
 	"net"
-	"rclip/common"
 	"strconv"
+
+	"github.com/washtubs/rclip/common"
 )
 
 type Reflector struct {

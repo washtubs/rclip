@@ -4,12 +4,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"rclip/common"
-	"rclip/receiver"
-	"rclip/reflector"
-	"rclip/sender"
+
+	"github.com/washtubs/rclip/common"
+	"github.com/washtubs/rclip/receiver"
+	"github.com/washtubs/rclip/reflector"
+	"github.com/washtubs/rclip/sender"
 )
 
 func main() {
@@ -21,6 +23,7 @@ func main() {
 	rcv_port := flag.Uint("rcv_port", 8891, "specify the port for receiver on reflector")
 	refl_ip := flag.String("refl_ip", "", "reflector listening ip address")
 	loose_san_check := flag.Bool("loose", false, "use hard coded address for reflector certificate SAN check")
+	eventName := flag.String("event", "", "Event name (receiver only)")
 	flag.Parse()
 	conf_dir := common.GetConfDir()
 	switch *role {
@@ -37,7 +40,17 @@ func main() {
 			common.ErrLog.Println(err)
 			return
 		}
-		rcv.ReadandSend(os.Stdin)
+		stdin, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			common.ErrLog.Println(err)
+			return
+		}
+		event := common.Event{
+			Name:  *eventName,
+			Args:  flag.Args(),
+			Stdin: stdin,
+		}
+		rcv.ReadandSend(event)
 
 	case "sender":
 		snd, err := sender.NewRclipSender(filepath.Join(conf_dir, "ca_cert"), filepath.Join(conf_dir, "sender_cert"), filepath.Join(conf_dir, "sender_key"), *refl_ip, int(*send_port), !*loose_san_check)
