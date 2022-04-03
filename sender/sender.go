@@ -8,6 +8,8 @@ import (
 	"encoding/gob"
 	"io/ioutil"
 	"net"
+	"os/exec"
+	"path"
 	"strconv"
 	"time"
 
@@ -78,8 +80,27 @@ func (sender *RclipSender) Receive() {
 		decoder := gob.NewDecoder(bytes.NewReader(msg))
 		var event common.Event
 		decoder.Decode(&event)
+		hooks := common.ListHooks()
+		foundHook := false
+		for _, hook := range hooks {
+			if hook == event.Name {
+				foundHook = true
+			}
+		}
+		if !foundHook {
+			common.WarnLog.Printf("Obtained event %v but no matching hook", event)
+			continue
+		}
 
-		common.InfoLog.Printf("Obtained event %v", event)
+		cmd := exec.Command(path.Join(common.GetHooksDir(), event.Name), event.Args...)
+		if len(event.Stdin) == 0 {
+			cmd.Stdin = bytes.NewReader(event.Stdin)
+		}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			common.ErrLog.Printf("Event execution failure event=[%v] error=[%v]. Output follows :\n %s", event, err, string(out))
+		}
+
 		//clipboard.Primary = false
 		//if err = clipboard.WriteAll(string(msg)); err != nil {
 		//common.WarnLog.Printf("error copy rcvd msg from %v into clipbaord, %v", sender.conn.RemoteAddr(), err)

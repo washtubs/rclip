@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -65,6 +66,28 @@ func GetConfDir() string {
 		return redir_str
 	}
 	return ""
+}
+
+func GetHooksDir() string {
+	return path.Join(GetConfDir(), "hooks")
+}
+
+func ListHooks() []string {
+	hooksDir := GetHooksDir()
+	entries, err := os.ReadDir(hooksDir)
+	if err != nil {
+		if os.IsExist(err) {
+			ErrLog.Printf("Error opening %s: %v", hooksDir, err)
+		}
+		return []string{}
+	}
+	hooks := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			hooks = append(hooks, entry.Name())
+		}
+	}
+	return hooks
 }
 
 func ReadSpecificLen(msglen uint32, conn net.Conn) ([]byte, error) {
