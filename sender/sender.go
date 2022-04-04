@@ -21,9 +21,6 @@ type RclipSender struct {
 }
 
 func NewRclipSender(ca_cert_path string, cert_path string, key_path string, svr_ip string, svr_port int, san_check bool) (*RclipSender, error) {
-	//fmt.Println(clipboard.Primary)
-	//clipboard.Primary = true
-	//fmt.Println(clipboard.Primary)
 	new_sender := new(RclipSender)
 	cer, err := tls.LoadX509KeyPair(cert_path, key_path)
 	if err != nil {
@@ -79,7 +76,12 @@ func (sender *RclipSender) Receive() {
 
 		decoder := gob.NewDecoder(bytes.NewReader(msg))
 		var event common.Event
-		decoder.Decode(&event)
+		err = decoder.Decode(&event)
+		if err != nil {
+			common.ErrLog.Printf("Error decoding message (len=%d): %v", len(msg), err)
+			continue
+		}
+
 		hooks := common.ListHooks()
 		foundHook := false
 		for _, hook := range hooks {
@@ -93,25 +95,15 @@ func (sender *RclipSender) Receive() {
 		}
 
 		cmd := exec.Command(path.Join(common.GetHooksDir(), event.Name), event.Args...)
-		if len(event.Stdin) == 0 {
-			cmd.Stdin = bytes.NewReader(event.Stdin)
+		if len(event.Stdin) != 0 {
+			cmd.Stdin = bytes.NewBuffer(event.Stdin)
 		}
+
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			common.ErrLog.Printf("Event execution failure event=[%v] error=[%v]. Output follows :\n %s", event, err, string(out))
 		}
 
-		//clipboard.Primary = false
-		//if err = clipboard.WriteAll(string(msg)); err != nil {
-		//common.WarnLog.Printf("error copy rcvd msg from %v into clipbaord, %v", sender.conn.RemoteAddr(), err)
-		//return
-		//}
-		//clipboard.Primary = true
-		//if err = clipboard.WriteAll(string(msg)); err != nil {
-		//common.WarnLog.Printf("error copy rcvd msg from %v into clipbaord, %v", sender.conn.RemoteAddr(), err)
-		//return
-		//}
-		//common.InfoLog.Printf("copied %v bytes msg from %v to clipboard", len(msg), sender.conn.RemoteAddr())
 	}
 
 }
