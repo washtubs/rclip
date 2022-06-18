@@ -3,6 +3,7 @@ package sender
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/gob"
@@ -94,14 +95,20 @@ func (sender *RclipSender) Receive() {
 			continue
 		}
 
-		cmd := exec.Command(path.Join(common.GetHooksDir(), event.Name), event.Args...)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, path.Join(common.GetHooksDir(), event.Name), event.Args...)
 		if len(event.Stdin) != 0 {
 			cmd.Stdin = bytes.NewBuffer(event.Stdin)
 		}
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			common.ErrLog.Printf("Event execution failure event=[%v] error=[%v]. Output follows :\n %s", event, err, string(out))
+			if ctx.Err() == context.DeadlineExceeded {
+				common.ErrLog.Printf("Deadline reached running hook for event=[%v]", event)
+			} else {
+				common.ErrLog.Printf("Event execution failure event=[%v] error=[%v]. Output follows :\n %s", event, err, string(out))
+			}
 		}
 
 	}
